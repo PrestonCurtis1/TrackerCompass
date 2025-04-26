@@ -1,0 +1,14 @@
+name: TrackerCompass
+version: 1.0
+main: me.Unprankable.trackerCompass.TrackerCompass
+api-version: "1.19"
+commands:
+  track:
+    usage: /track <player>
+    description: Give a tracking compass
+permissions:
+  trackercompass.use:
+    description: "track players with a compass"
+    default: false
+authors: [ Unprankable ]
+description: Compass for tracking playerss
