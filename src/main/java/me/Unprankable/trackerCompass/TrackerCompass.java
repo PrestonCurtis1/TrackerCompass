@@ -14,14 +14,24 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.persistence.PersistentDataType;  // For Paper's NBT handling
+import org.bukkit.scheduler.BukkitRunnable;
+
 import java.util.ArrayList;
 
 public class TrackerCompass extends JavaPlugin implements CommandExecutor, Listener {
-
+    boolean autoUpdateCompass = true;
     @Override
     public void onEnable() {
         this.getCommand("track").setExecutor(this);
         getServer().getPluginManager().registerEvents(this, this);
+        if (autoUpdateCompass){
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    autoUpdate(); // Call your tick function
+                }
+            }.runTaskTimer(this, 0L, 100L);
+        }
     }
 
     @Override
@@ -66,21 +76,31 @@ public class TrackerCompass extends JavaPlugin implements CommandExecutor, Liste
         PersistentDataContainer container = itemMeta.getPersistentDataContainer();
         return container.has(new NamespacedKey(this, "tracking"), PersistentDataType.STRING);
     }
-
+    public void autoUpdate(){
+        for (Player player: Bukkit.getOnlinePlayers()){
+            ItemStack[] contents = player.getInventory().getContents();
+            for (ItemStack item: contents) {
+                if(item != null && item.getType() == Material.COMPASS){
+                    if(isTrackerCompass(item)){
+                        updateCompass(player,item,false);
+                    }
+                }
+            }
+        }
+    }
     @EventHandler
     public void onPlayerClicks(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
         if (item != null && item.getType() == Material.COMPASS) {
             if (isTrackerCompass(item)){
-                updateCompass(player);
+                updateCompass(player, player.getInventory().getItemInMainHand(),true);
             }
         }
     }
 
-    public void updateCompass(Player player){
-        ItemStack heldItem = player.getInventory().getItemInMainHand();
-        CompassMeta meta = (CompassMeta) heldItem.getItemMeta();
+    public void updateCompass(Player player, ItemStack item, boolean announceOffline){
+        CompassMeta meta = (CompassMeta) item.getItemMeta();
         String targetName = meta.getPersistentDataContainer().get(new NamespacedKey(this, "tracking"), PersistentDataType.STRING);
         Player target = Bukkit.getPlayer(targetName);
         if (target != null){
@@ -91,9 +111,9 @@ public class TrackerCompass extends JavaPlugin implements CommandExecutor, Liste
             Location lodestone = target.getLocation();
             meta.setLodestoneTracked(false);
             meta.setLodestone(lodestone);
-            heldItem.setItemMeta(meta);
+            item.setItemMeta(meta);
         } else {
-            player.sendMessage(ChatColor.RED + targetName + " is not online.");
+            if (announceOffline)player.sendMessage(ChatColor.RED + targetName + " is not online.");
         }
     }
 
